@@ -244,23 +244,18 @@ VÝSTUP (vždy jen tento XML, žádný další text):
 
 1. **Vysvětlete pojmy *Context Pollution* a *Attention Dispersion* v kontextu víceagentních systémů. Proč je výhodnější předávat mezi agenty pouze strukturovaný JSON/XML výstup namísto kompletní konverzační historie?**
 
-> **Vaše odpověď:**
->
-> **Context Pollution** (znečištění kontextu) nastává, když se do kontextového okna agenta dostanou informace, které pro jeho úlohu nejsou relevantní: úvahy jiných agentů, slepé uličky, zamítnuté verze kódu, staré chyby nebo instrukce určené jiné roli. Model je pak může mylně považovat za platné (např. Auditor začne hodnotit kód z první iterace nebo převezme styl uvažování Developera), roste riziko halucinací a míchání rolí.
->
-> **Attention Dispersion** (rozptýlení pozornosti) vyplývá z mechanismu self-attention. Softmax rozděluje váhu pozornosti mezi všechny tokeny v kontextu, takže čím delší a zašuměnější kontext, tím menší podíl připadá na skutečně důležité tokeny. Kvalita se zhoršuje zvlášť u informací uprostřed dlouhého kontextu (efekt „lost in the middle“).
->
-> **Proč strukturovaný JSON/XML:** Strukturovaný výstup funguje jako jasně definované rozhraní mezi agenty. Předává jen výsledek (specifikaci, kód, verdikt), ne cestu k němu. Kontext je proto krátký a relevantní (méně tokenů, nižší cena a latence, lepší pozornost), každý agent dostává jen data pro svou roli (oddělení odpovědností), výstup lze strojově validovat proti schématu a parsovat bez chyb a systém je lépe laditelný a auditovatelný, protože u každého předání je vidět, co přesně prošlo.
+**Context Pollution** (znečištění kontextu) nastává, když se do kontextového okna agenta dostanou informace, které pro jeho úlohu nejsou relevantní: úvahy jiných agentů, slepé uličky, zamítnuté verze kódu, staré chyby nebo instrukce určené jiné roli. Model je pak může mylně považovat za platné (např. Auditor začne hodnotit kód z první iterace nebo převezme styl uvažování Developera), roste riziko halucinací a míchání rolí.
+
+**Attention Dispersion** (rozptýlení pozornosti) vyplývá z mechanismu self-attention. Softmax rozděluje váhu pozornosti mezi všechny tokeny v kontextu, takže čím delší a zašuměnější kontext, tím menší podíl připadá na skutečně důležité tokeny. Kvalita se zhoršuje zvlášť u informací uprostřed dlouhého kontextu (efekt „lost in the middle“).
+
+**Proč strukturovaný JSON/XML:** Strukturovaný výstup funguje jako jasně definované rozhraní mezi agenty. Předává jen výsledek (specifikaci, kód, verdikt), ne cestu k němu. Kontext je proto krátký a relevantní (méně tokenů, nižší cena a latence, lepší pozornost), každý agent dostává jen data pro svou roli (oddělení odpovědností), výstup lze strojově validovat proti schématu a parsovat bez chyb a systém je lépe laditelný a auditovatelný, protože u každého předání je vidět, co přesně prošlo.
 
 2. **Jakým způsobem generování tokenů v bloku `<thought>` ovlivňuje výpočetní kapacitu věnovanou řešení úlohy autoregresivním modelem $P(w_t \mid w_{<t})$?**
+Autoregresivní model generuje každý token jedním průchodem sítí s pevným počtem vrstev, takže na jeden token připadá zhruba konstantní množství výpočtu. Kdyby měl model odpovědět rovnou, musel by celé řešení „spočítat“ v jediném průchodu, což u vícekrokových úloh nestačí.
 
-> **Vaše odpověď:**
->
-> Autoregresivní model generuje každý token jedním průchodem sítí s pevným počtem vrstev, takže na jeden token připadá zhruba konstantní množství výpočtu. Kdyby měl model odpovědět rovnou, musel by celé řešení „spočítat“ v jediném průchodu, což u vícekrokových úloh nestačí.
->
-> Tokeny v bloku `<thought>` fungují jako **externí pracovní paměť (scratchpad)**. Každý vygenerovaný token se stane součástí podmínky $w_{<t}$ pro všechny další tokeny, takže model může mezivýsledky zapsat a v dalších krocích na ně navázat. Počet průchodů sítí, a tedy i celkový výpočet věnovaný úloze, roste **lineárně s délkou uvažování**. Jde o tzv. *test-time compute*: delší úvaha = více výpočtu nad stejným problémem. Složitý problém se tím rozloží na posloupnost jednodušších podmíněných predikcí, z nichž každá je pro model snáze řešitelná.
->
-> Důsledek: Chain-of-Thought / ReAct zlepšuje přesnost u úloh vyžadujících více kroků, ale za cenu vyšší latence a počtu tokenů. Kvalita výsledku zároveň závisí na kvalitě úvah: chyba zapsaná v `<thought>` se dál podmiňuje a šíří, proto je důležité úvahy zakládat na skutečných `<observation>` (viz Úkol 1.1).
+Tokeny v bloku `<thought>` fungují jako **externí pracovní paměť (scratchpad)**. Každý vygenerovaný token se stane součástí podmínky $w_{<t}$ pro všechny další tokeny, takže model může mezivýsledky zapsat a v dalších krocích na ně navázat. Počet průchodů sítí, a tedy i celkový výpočet věnovaný úloze, roste **lineárně s délkou uvažování**. Jde o tzv. *test-time compute*: delší úvaha = více výpočtu nad stejným problémem. Složitý problém se tím rozloží na posloupnost jednodušších podmíněných predikcí, z nichž každá je pro model snáze řešitelná.
+
+Důsledek: Chain-of-Thought / ReAct zlepšuje přesnost u úloh vyžadujících více kroků, ale za cenu vyšší latence a počtu tokenů. Kvalita výsledku zároveň závisí na kvalitě úvah: chyba zapsaná v `<thought>` se dál podmiňuje a šíří, proto je důležité úvahy zakládat na skutečných `<observation>` (viz Úkol 1.1).
 
 ---
 
@@ -275,6 +270,6 @@ VÝSTUP (vždy jen tento XML, žádný další text):
 **Krátká reflexe na cvičení - díky za pomoc!**
 
 - Který úkol nebo koncept pro vás byl dnes nejjednodušší? 
-**[ Sem zadejte svou odpověď ]**
+Nejjednodušší byl ten úkol 1. Pak tu testovací část bych chtěla lépe uvedenou. jestli jsme měli dávat odpověď my nebo si jen nasdílet prompt a otestovat si to navzájem na nějakém LLM modelu. Musím ale uznat, že dnešní zadání úkolu je mnohonásobně lepší než z minulých cvičení, vidím důvod proč děláme a je dobře návodné, abychom se mohli soustředit na to co děláme a ne na to abychom vůbec pochopili zadání. 
 - Která implementace kódu nebo statistický koncept pro vás představovaly největší výzvu? 
-**[ Sem zadejte svou odpověď ]**
+Pro mě osobně je nejtěžší zadání to, které obsahuje nějaký kód a mám pracovat pouze s ním. (nemyslím tím XML tagy, ale třeba minulé cvičení, kde jsme měli něco dělat  v Colabu, napojit to na Gemini a tam něco kontrolovat pomocí temperature a nějak hodnotit -> tenhle úkol jsem nepochopila a jelikož jsem se nedostala ani pořádně k výsledkům tak mi moc nedal, protože jsem nepochopila ani zadání, ani provedení a nakonec bych uvítala aspoň zobrzaení výsledků, abych aspoň tušila co mělo být výsledkem, ale ani to neproběhlo a to mě trochu demotivovalo) 
